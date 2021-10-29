@@ -16,7 +16,7 @@ public class Word {
     private String word;
     private String html;
     private String description;
-    private String pronounce;
+    private String pronounce = "";
 
     public Word() {
     }

@@ -3,6 +3,7 @@ package com.oop.dictionary.dictionary.services;
 import com.oop.dictionary.dictionary.models.ResponseObject;
 import com.oop.dictionary.dictionary.models.Word;
 import com.oop.dictionary.dictionary.repositories.WordRepository;
+import com.oop.dictionary.dictionary.services.algorithm.GFG;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -36,7 +37,65 @@ public class WordService {
             words.add(new Word((int) newWords.get(i)[0], (String) newWords.get(i)[4], (String) newWords.get(i)[2], (String) newWords.get(i)[1], (String) newWords.get(i)[3]));
         }
 
+        if(words.size() == 0 ){
+            words = suggestWord(character);
+        }
+
         return new ResponseObject("OK", "Lấy các từ tìm kiếm thành công!", words);
+    }
+
+    /**
+     * Đưa ra gợi ý từ khi không tìm được từ
+     * @param character Từ cần đưa ra gợi ý
+     * @return Mảng từ được gợi ý
+     */
+    public List<Word> suggestWord(String character){
+        //Mảng kết quả
+        List<Word> words =new ArrayList<Word>();
+
+        //Mảng lưu từng giá trị lớp
+        List<Word> wordsFirst = new ArrayList<Word>();
+        List<Word> wordsSecond = new ArrayList<Word>();
+        List<Word> wordsThird = new ArrayList<Word>();
+
+        //Gọi cơ sở dữ liệu lấy tất cả phần tử
+        List<Word> allWords = wordRepository.findAll();
+
+        //Các khoảng cách cố định
+        int distFirst = 1;
+        int distSecond = 2;
+        int distThird = 4;
+
+
+        //Lặp nếu khoảng cách nhỏ hơn 3 thì thêm vào mảng cần tìm
+        int lengthWords = allWords.size();
+        int distHamming = 0;
+        for (int i = 0; i < lengthWords; i++){
+            distHamming = GFG.hammingDist(character, allWords.get(i).getWord());
+            if (distHamming <= distFirst){
+                wordsFirst.add(allWords.get(i));
+            }
+            else if (distHamming <= distSecond){
+                wordsSecond.add(allWords.get(i));
+            }
+            else if (distHamming <= distThird){
+                wordsThird.add(allWords.get(i));
+            }
+        }
+
+        // Thêm phần tử theo từng lớp
+        words.addAll(wordsFirst);
+
+        if(words.size() < 3){
+            words.addAll(wordsSecond);
+        }
+
+        if(words.size() < 3){
+            words.addAll(wordsThird);
+        }
+
+        return words;
+
     }
 
     /**

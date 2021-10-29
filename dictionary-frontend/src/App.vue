@@ -20,6 +20,7 @@
           outlined
           v-model="textSearch"
           @keyup="searchTimeOut()"
+          @keyup.enter="words.length > 0 ? (wordDetail = words[0]) : 1"
         ></v-text-field>
       </v-sheet>
 
@@ -58,7 +59,7 @@
                       v-on="on"
                       @click="
                         diglogWord = wordDetail;
-                        stateDiglog = 'update';
+                        stateDialog = 'update';
                       "
                     >
                       <v-icon dark>
@@ -75,7 +76,7 @@
                       v-on="on"
                       @click="
                         diglogWord = newWord;
-                        stateDiglog = 'add';
+                        stateDialog = 'add';
                       "
                     >
                       <v-icon dark>
@@ -100,8 +101,20 @@
                 </template>
 
                 <v-card>
-                  <v-card-title class="text-h5 grey lighten-2">
+                  <v-card-title
+                    v-if="stateDialog == 'update'"
+                    class="text-h5 grey lighten-2"
+                  >
+                    Sửa từ
+                  </v-card-title>
+                  <v-card-title
+                    v-else-if="stateDialog == 'add'"
+                    class="text-h5 grey lighten-2"
+                  >
                     Thêm từ mới
+                  </v-card-title>
+                  <v-card-title v-else class="text-h5 grey lighten-2">
+                    Xóa từ
                   </v-card-title>
 
                   <v-card-text class="py-5">
@@ -129,19 +142,27 @@
                           v-model="diglogWord.pronounce"
                           label="Phát âm"
                         ></v-text-field>
-                        <v-text-field
+
+                        <v-btn class="mb-5" @click="generateHTML()">
+                          Sinh HTML
+                        </v-btn>
+                        <v-textarea
                           v-model="diglogWord.html"
                           label="HTML"
-                        ></v-text-field>
+                        ></v-textarea>
 
                         <v-spacer></v-spacer>
+
                         <v-btn
                           :disabled="!valid"
                           color="success"
                           class="mr-4"
-                          @click="dialog = false"
+                          @click="
+                            dialog = false;
+                            submitFormAddAndUpate();
+                          "
                         >
-                          Thêm từ mới
+                          Chấp nhận
                         </v-btn>
 
                         <v-btn
@@ -157,14 +178,16 @@
                       <h3 class="font-weight-bold">
                         Bạn có muốn xóa từ
                         <span style="color:red"
-                          >{{ wordDetail.word }}:
-                          {{ wordDetail.description }}</span
+                          >{{ wordDetail.word }}</span
                         >
                         không?
                       </h3>
                       <v-btn
                         color="error"
-                        @click="dialog = false"
+                        @click="
+                          dialog = false;
+                          deleteWord();
+                        "
                         class="mr-4 mt-5"
                       >
                         Có
@@ -184,7 +207,23 @@
               </v-dialog>
 
               <!-- Content -->
-              <div v-html="wordDetail.html" class="pl-5 pt-2 pb-5"></div>
+              <div class="pl-5 pt-2 pb-5">
+                <v-btn
+                  v-if="wordDetail.id > 0"
+                  @click="playTextToSpeech()"
+                  small
+                  fab
+                >
+                  <v-icon dark>
+                    mdi-volume-high
+                  </v-icon>
+                </v-btn>
+                <div v-html="wordDetail.html"></div>
+              </div>
+              <!-- Snackbar -->
+              <v-snackbar v-model="snackbar" :color="colorSnackbar" :timeout="timeout">
+                {{ textSnackbar }}
+              </v-snackbar>
 
               <div class="text-center"></div>
             </v-card>
@@ -201,189 +240,25 @@ export default {
   name: "App",
 
   components: {},
+  created(){
+    this.wordDetail = this.homeWord;
+  },
 
   data: () => ({
-    words: [
-      {
-        id: 29354,
-        word: "love",
-        html:
-          "<h1>love</h1><h3><i>/lʌv/</i></h3><h2>danh từ</h2><ul><li>lòng yêu, tình thương<ul style=\"list-style-type:circle\"><li>love of one's country:<i> lòng yêu nước</i></li><li>a mother's love for her children:<i> tình mẹ yêu con</i></li></ul></li><li>tình yêu, ",
-        description: "danh từ: lòng yêu, tình thương",
-        pronounce: "lʌv",
-      },
-      {
-        id: 29355,
-        word: "love-affair",
-        html:
-          "<h1>love-affair</h1><h3><i>/'lʌvə,feə/</i></h3><h2>danh từ</h2><ul><li>chuyện yêu đương, chuyện tình</li></ul>",
-        description: "danh từ: chuyện yêu đương, chuyện tình",
-        pronounce: "'lʌvə,feə",
-      },
-      {
-        id: 29356,
-        word: "love-apple",
-        html:
-          "<h1>love-apple</h1><h3><i>/'lʌv,æpl/</i></h3><h2>danh từ</h2><ul><li>(thực vật học) cà chua</li></ul>",
-        description: "danh từ: (thực vật học) cà chua",
-        pronounce: "'lʌv,æpl",
-      },
-      {
-        id: 29357,
-        word: "love-begotten",
-        html:
-          "<h1>love-begotten</h1><h3><i>/'lʌvbi'gɔtn/</i></h3><h2>tính từ</h2><ul><li>đẻ hoang</li></ul>",
-        description: "tính từ: đẻ hoang",
-        pronounce: "'lʌvbi'gɔtn",
-      },
-      {
-        id: 29358,
-        word: "love-bird",
-        html:
-          "<h1>love-bird</h1><h3><i>/'lʌvbə:d/</i></h3><h2>danh từ</h2><ul><li>(động vật học) vẹt xanh</li></ul>",
-        description: "danh từ: (động vật học) vẹt xanh",
-        pronounce: "'lʌvbə:d",
-      },
-      {
-        id: 29359,
-        word: "love-child",
-        html:
-          "<h1>love-child</h1><h3><i>/'lʌvtʃaild/</i></h3><h2>danh từ</h2><ul><li>con hoang</li></ul>",
-        description: "danh từ: con hoang",
-        pronounce: "'lʌvtʃaild",
-      },
-      {
-        id: 29360,
-        word: "love-knot",
-        html:
-          "<h1>love-knot</h1><h3><i>/'lʌvnɔt/</i></h3><h2>danh từ</h2><ul><li>nơ thắt hình số 8</li></ul>",
-        description: "danh từ: nơ thắt hình số 8",
-        pronounce: "'lʌvnɔt",
-      },
-      {
-        id: 29361,
-        word: "love-letter",
-        html:
-          "<h1>love-letter</h1><h3><i>/'lʌv,letə/</i></h3><h2>danh từ</h2><ul><li>thư tình</li></ul>",
-        description: "danh từ: thư tình",
-        pronounce: "'lʌv,letə",
-      },
-      {
-        id: 29362,
-        word: "love-lorn",
-        html:
-          "<h1>love-lorn</h1><h3><i>/'lʌvlɔ:n/</i></h3><h2>tính từ</h2><ul><li>sầu muộn vì tình; thất tình; bị tình phụ, bị bỏ rơi</li></ul>",
-        description:
-          "tính từ: sầu muộn vì tình; thất tình; bị tình phụ, bị bỏ rơi",
-        pronounce: "'lʌvlɔ:n",
-      },
-      {
-        id: 29363,
-        word: "love-lornness",
-        html:
-          "<h1>love-lornness</h1><h3><i>/'lʌvlɔ:nnis/</i></h3><h2>danh từ</h2><ul><li>nỗi sầu muộn vì tình; nỗi thất tình; sự bị tình phụ</li></ul>",
-        description:
-          "danh từ: nỗi sầu muộn vì tình; nỗi thất tình; sự bị tình phụ",
-        pronounce: "'lʌvlɔ:nnis",
-      },
-      {
-        id: 29364,
-        word: "love-making",
-        html:
-          "<h1>love-making</h1><h3><i>/'lʌv,meikiɳ/</i></h3><h2>danh từ</h2><ul><li>sự tỏ tình, sự tán gái</li><li>sự ăn nằm với nhau, sự giao hợp</li></ul>",
-        description: "danh từ: sự tỏ tình, sự tán gái",
-        pronounce: "'lʌv,meikiɳ",
-      },
-      {
-        id: 29365,
-        word: "love-match",
-        html:
-          "<h1>love-match</h1><h3><i>/'lʌvmætʃ/</i></h3><h2>danh từ</h2><ul><li>sự lấy nhau vì tình</li></ul>",
-        description: "danh từ: sự lấy nhau vì tình",
-        pronounce: "'lʌvmætʃ",
-      },
-      {
-        id: 29366,
-        word: "love-token",
-        html:
-          "<h1>love-token</h1><h3><i>/'lʌv,toukən/</i></h3><h2>danh từ</h2><ul><li>vật kỷ niệm tình yêu</li></ul>",
-        description: "danh từ: vật kỷ niệm tình yêu",
-        pronounce: "'lʌv,toukən",
-      },
-      {
-        id: 29367,
-        word: "lovelace",
-        html:
-          "<h1>lovelace</h1><h3><i>/'lʌvleis/</i></h3><h2>danh từ</h2><ul><li>chàng công tử phong lưu; anh chàng hay tán gái; sở khanh</li></ul>",
-        description:
-          "danh từ: chàng công tử phong lưu; anh chàng hay tán gái; sở khanh",
-        pronounce: "'lʌvleis",
-      },
-      {
-        id: 29368,
-        word: "loveless",
-        html:
-          "<h1>loveless</h1><h3><i>/'lʌvlis/</i></h3><h2>tính từ</h2><ul><li>không tình yêu; không yêu; không được yêu</li></ul>",
-        description: "tính từ: không tình yêu; không yêu; không được yêu",
-        pronounce: "'lʌvlis",
-      },
-      {
-        id: 29369,
-        word: "loveliness",
-        html:
-          "<h1>loveliness</h1><h3><i>/'lʌvlinis/</i></h3><h2>danh từ</h2><ul><li>vẻ đẹp, vẻ đáng yêu, vẻ yêu kiều</li></ul>",
-        description: "danh từ: vẻ đẹp, vẻ đáng yêu, vẻ yêu kiều",
-        pronounce: "'lʌvlinis",
-      },
-      {
-        id: 29370,
-        word: "lovelock",
-        html:
-          "<h1>lovelock</h1><h3><i>/'ʌvlɔk/</i></h3><h2>danh từ</h2><ul><li>món tóc mai (vòng xuống ở trán hay thái dương)</li></ul>",
-        description: "danh từ: món tóc mai (vòng xuống ở trán hay thái dương)",
-        pronounce: "'ʌvlɔk",
-      },
-      {
-        id: 29371,
-        word: "lovely",
-        html:
-          "<h1>lovely</h1><h3><i>/'lʌvli/</i></h3><h2>tính từ</h2><ul><li>đẹp đẽ, xinh, đáng yêu, dễ thương, có duyên, yêu kiều</li><li>(thông tục) thú vị, vui thú, thích thú</li><li>(từ Mỹ,nghĩa Mỹ) đẹp (về mặt đạo đức)</li></ul><h2>danh từ</h2><ul><li>(từ Mỹ,nghĩa",
-        description:
-          "tính từ: đẹp đẽ, xinh, đáng yêu, dễ thương, có duyên, yêu kiều",
-        pronounce: "'lʌvli",
-      },
-      {
-        id: 29372,
-        word: "lover",
-        html:
-          '<h1>lover</h1><h3><i>/\'lʌvə/</i></h3><h2>danh từ</h2><ul><li>người yêu, người ham thích, người ham chuộng, người hâm mộ<ul style="list-style-type:circle"><li>a lover of music:<i> người ham thích nhạc</i></li></ul></li><li>người yêu, người tình</li></ul>',
-        description:
-          "danh từ: người yêu, người ham thích, người ham chuộng, người hâm mộ",
-        pronounce: "'lʌvə",
-      },
-      {
-        id: 29373,
-        word: "lovesick",
-        html:
-          "<h1>lovesick</h1><h3><i>/'lʌvsik/</i></h3><h2>tính từ</h2><ul><li>tương tư</li></ul>",
-        description: "tính từ: tương tư",
-        pronounce: "'lʌvsik",
-      },
-    ],
+    words: [],
 
     // Đối tượng hiện tại và đối tượng khi sửa
-    wordDetail: {
+    wordDetail:{},
+    homeWord: {
       id: 0,
       description: "",
-      html:
-        "",
+      html: '<h1 class="my-4">  ỨNG DỤNG TỪ ĐIỂN</h1><p><i class="my-5">~ Nhanh chóng, dễ dàng, thuận tiện ~</i></p>',
       pronounce: "Tra cứu nhanh, thuận tiện, chính xác!",
       word: "ỨNG DỤNG TỪ ĐIỆN",
     },
 
     // Đối tượng khởi tạo thêm mới
     newWord: {
-      id: -1,
       description: "",
       html:
         "<h1>Từ tiếng anh</h1><h3><i>/Phiên âm/</i></h3><h2>Loại từ</h2><ul><li>Nghĩa</li></ul>",
@@ -400,9 +275,20 @@ export default {
 
     // Trường từ khóa tìm kiếm
     textSearch: "",
+    oldTextSearch: "",
 
     //URL Server
-    URL: "localhost:8081/api/v1/Words",
+    URL: "http://localhost:8081/api/v1/Words",
+
+    //URL Audio
+    urlAudio:
+      "https://translate.google.com/translate_tts?ie=UTF-8&q=Hello%20World&tl=en&total=1&idx=0&textlen=11&client=tw-ob&prev=input&ttsspeed=1",
+
+    //Snackbar
+    snackbar: false,
+    textSnackbar: "Thêm mới thành công",
+    timeout: 1200,
+    colorSnackbar: "success",
 
     //Từ cũ
     cards: ["Today"],
@@ -415,22 +301,165 @@ export default {
     ],
   }),
   methods: {
+    /**
+     * Hàm tìm kiếm có thời gian trể nhỏ
+     * Created By: LMCUONG(28/10/2021)
+     */
     searchTimeOut() {
       if (this.timer) {
         clearTimeout(this.timer);
         this.timer = null;
       }
       this.timer = setTimeout(() => {
-        // code
+        this.getWords("get");
+      }, 200);
+    },
+
+    /**
+     * Lấy từ khóa khi nhập dự liệu
+     * Created By: LMCUONG(28/10/2021)
+     */
+    getWords(state) {
+      if (this.isOtherWord() || state == "refresh")
         axios
-          .get(this.URL)
+          .get(this.URL + "/" + this.textSearch)
           .then((response) => {
-            console.log(response);
+            this.words = response.data.data;
+            this.oldTextSearch = this.textSearch;
           })
           .catch((e) => {
             console.log(e);
           });
-      }, 500);
+    },
+
+    /**
+     * Kiểm tra xem từ nhập vào khác từ cũ không
+     * @param {}
+     * @returns {}
+     * Created By: LMCUONG(28/10/2021)
+     */
+    isOtherWord() {
+      let isOther = true;
+
+      if (this.textSearch == "" || this.textSearch == null) {
+        isOther = false;
+      }
+
+      if (isOther) {
+        if (this.oldTextSearch == this.textSearch) {
+          isOther = false;
+        }
+      }
+
+      return isOther;
+    },
+
+    playTextToSpeech() {
+      this.speak(this.wordDetail.word);
+    },
+
+    /**
+     * Phát audio theo từ
+     * @param {}
+     * @returns {}
+     * Created By: LMCUONG(28/10/2021)
+     */
+    speak(message) {
+      var msg = new SpeechSynthesisUtterance(message);
+      var voices = window.speechSynthesis.getVoices();
+      msg.voice = voices[4];
+      window.speechSynthesis.speak(msg);
+    },
+
+    submitFormAddAndUpate() {
+      if (this.stateDialog == "add") {
+        this.addWord();
+      } else if (this.stateDialog == "update") {
+        this.updateWord();
+      }
+    },
+
+    addWord() {
+      axios({
+        method: "post",
+        url: this.URL + "/insert",
+        headers: {},
+        data: this.diglogWord,
+      })
+        .then((response) => {
+          this.handleResponse(response.data.status, response.data.message);
+          this.newWord = {
+            description: "",
+            html:
+              "<h1>Từ tiếng anh</h1><h3><i>/Phiên âm/</i></h3><h2>Loại từ</h2><ul><li>Nghĩa</li></ul>",
+            pronounce: "",
+            word: "",
+          };
+        })
+        .catch((e) => {
+          this.openSnackbar(e.response, "error");
+          console.log(e);
+        });
+    },
+
+    updateWord() {
+      axios({
+        method: "put",
+        url: this.URL + "/update",
+        headers: {},
+        data: this.diglogWord,
+      })
+        .then((response) => {
+          this.handleResponse(response.data.status, response.data.message);
+        })
+        .catch((e) => {
+          this.openSnackbar(e.response, "error");
+          console.log(e);
+        });
+    },
+
+    deleteWord() {
+      axios({
+        method: "delete",
+        url: this.URL + "/" + this.wordDetail.id,
+      })
+        .then((response) => {
+          this.handleResponse(response.data.status, response.data.message);
+          this.wordDetail = this.homeWord;
+        })
+        .catch((e) => {
+          this.openSnackbar(e.response, "error");
+          console.log(e);
+        });
+    },
+
+    // Xử lý Snackbar
+    handleResponse(status, message) {
+      if (status == "OK") {
+        this.openSnackbar(message, "success");
+        this.getWords("refresh");
+      } else {
+        this.openSnackbar(message, "error");
+      }
+    },
+
+    openSnackbar(text, state) {
+      this.snackbar = true;
+      this.colorSnackbar = state;
+      this.textSnackbar = text;
+    },
+
+    /**
+     * Sinh mã HTML
+     * @param {}
+     * @returns {}
+     * Created By: LMCUONG(28/10/2021)
+     */
+    generateHTML() {
+      this.diglogWord.html = `<h1>${this.diglogWord.word}</h1>
+      <h3><i>/${this.diglogWord.pronounce}/</i></h3>
+      <ul><li>${this.diglogWord.description}</li></ul>`;
+      console.log(this.diglogWord);
     },
   },
 };

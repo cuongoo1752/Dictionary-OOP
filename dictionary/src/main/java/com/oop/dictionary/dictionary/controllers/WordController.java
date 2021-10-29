@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:8080/")
 @RestController
 @RequestMapping(path = "api/v1/Words")
 public class WordController {
@@ -19,24 +20,25 @@ public class WordController {
     @Autowired
     private WordService wordService;
 
-
-    @CrossOrigin(origins = "*")
+    @CrossOrigin(origins = "http://localhost:8080/")
     @RequestMapping(method = RequestMethod.GET, path = "/{character}")
     public ResponseEntity<ResponseObject> fildAllWords(@PathVariable String character) {
         return ResponseEntity.status(HttpStatus.OK).body(wordService.findWords(character));
 
     }
-
+    @CrossOrigin(origins = "http://localhost:8080/")
     @PostMapping("/insert")
     public ResponseEntity<ResponseObject> insertWord(@RequestBody Word word) {
         return ResponseEntity.status(HttpStatus.OK).body(wordService.insertWord(word));
     }
 
+    @CrossOrigin(origins = "http://localhost:8080/")
     @PutMapping("/update")
     public ResponseEntity<ResponseObject> updateWord(@RequestBody Word newWord) {
         return ResponseEntity.status(HttpStatus.OK).body(wordService.updateWord(newWord));
     }
 
+    @CrossOrigin(origins = "http://localhost:8080/")
     @DeleteMapping("/{id}")
     public ResponseEntity<ResponseObject> deleteWord(@PathVariable int id) {
         return ResponseEntity.status(HttpStatus.OK).body(wordService.deleteWord(id));
